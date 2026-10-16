@@ -13,3 +13,14 @@ Repository is intended for future secure laptop pairing. Never commit bearer cre
 ## Astae Remote CLI v0.1.0 (experimental)
 
 The source of the **separate one-command Astae device agent prototype** is in [`cli/`](./cli/). Includes colorful CMD output, reconnect/session scaffolding, the current-Agent compatibility check, and six passing unit tests. **It is not connected to the existing Railway Relay yet**: production does not implement the proposed `/device/*` pairing API. Do not treat local process status as authorization of the ChatGPT account. No existing Railway, Windows Agent, or pairing data was modified by this code upload.
+
+## Astae Device Pairing v0.2 — staging
+
+- [Pairing backend and owner verification page](cli/server/README.md)
+- [Colorful Windows CLI](cli/bin/astae-remote.mjs) and [CMD launcher](cli/astae-remote.cmd)
+- Device authorization: terminal prints an 8-character code, user confirms it in a browser, token is saved and the agent reconnects automatically. Green **Connected** appears only after an accepted heartbeat.
+- Tested on the owner's Windows laptop: 9 tests passed, including a real CLI-to-local-relay pairing roundtrip.
+
+**Important:** This is a staging pair service, not yet a publicly deployable authenticated multi-user remote-control platform. It does not yet link an account to ChatGPT MCP OAuth; only device-pairing and read-only/empty job-polling work. Existing production Relay and paired Agent were not modified.
+
+After a trusted production pairing Relay and real account sign-in are added, users with Node.js and Git can start with a GitHub package via `npx --yes github:amirastae11/remote remote --relay https://PAIR-RELAY-HOST` (preview only). For local status on Windows run `cli\\astae-remote.cmd status`.
