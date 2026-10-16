@@ -12,6 +12,7 @@ const say=(s='')=>console.log(s);
 const line=(glyph,label,s,c='cyan')=>say(`${col(glyph,c)}  ${label}${s===undefined?'':': '+col(s,c)}`);
 function banner(){say(col('\n   ╔══════════════════════════════════════╗\n   ║  ⚡ ASTAE REMOTE  ·  DEVICE AGENT   ║\n   ╚══════════════════════════════════════╝\n','cyan'));}
 async function openBrowser(url){
+  if (process.env.ASTAE_NO_BROWSER === '1') return;
   const cmd=process.platform==='win32'?'cmd':process.platform==='darwin'?'open':'xdg-open';
   const args=process.platform==='win32'?['/c','start','','"'+url+'"']:[url];
   try{const child=spawn(cmd,args,{stdio:'ignore',detached:true,windowsHide:true});child.on('error',()=>{});child.unref();}catch{}
