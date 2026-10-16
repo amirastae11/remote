@@ -51,7 +51,7 @@ export async function makePairingServer({baseURL='http://127.0.0.1:9011',stateFi
     return {access_token:access,refresh_token:refresh,token_type:'Bearer',device_id:d.id,expires_in:3600};};
   async function handler(req,res){try{
     const u=new URL(req.url,'http://localhost'),route=u.pathname;
-    if(req.headers.origin&&req.headers.origin!==base.origin)return respond(res,403,{error:'bad_origin'});
+    if(!['GET','HEAD'].includes(req.method)&&req.headers.origin&&req.headers.origin!==base.origin)return respond(res,403,{error:'bad_origin'});
     if(req.method==='GET'&&route==='/health')return respond(res,200,{ok:true,service:'astae-device-pairing',version:'0.2.0',deviceFlow:true});
     if(req.method==='POST'&&route==='/device/authorization'){
       if(limited(req,'start',8))return respond(res,429,{error:'rate_limited'});

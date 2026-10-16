@@ -42,3 +42,14 @@ test('cross-origin and unauthenticated jobs are forbidden',async()=>{
     r=await fetch(t.origin+'/api/devices');assert.equal(r.status,401);
   }finally{await t.done();}
 });
+
+test('external ChatGPT iOS navigation can view verify page, but cross-origin POST stays denied', async()=>{
+  const server=await local();try{
+    let r=await fetch(server.origin+'/verify',{headers:{origin:'https://chatgpt.com'}});
+    assert.equal(r.status,200);assert.match(await r.text(),/Verify Device/);
+    r=await fetch(server.origin+'/verify',{headers:{origin:'null'}});
+    assert.equal(r.status,200);
+    r=await fetch(server.origin+'/verify',{method:'POST',headers:{origin:'https://chatgpt.com','content-type':'application/x-www-form-urlencoded'},body:'code=DEADBEEF'});
+    assert.equal(r.status,403);assert.equal((await r.json()).error,'bad_origin');
+  }finally{await server.done();}
+});
