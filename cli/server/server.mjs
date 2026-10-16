@@ -51,7 +51,14 @@ export async function makePairingServer({baseURL='http://127.0.0.1:9011',stateFi
     return {access_token:access,refresh_token:refresh,token_type:'Bearer',device_id:d.id,expires_in:3600};};
   async function handler(req,res){try{
     const u=new URL(req.url,'http://localhost'),route=u.pathname;
-    if(!['GET','HEAD'].includes(req.method)&&req.headers.origin&&req.headers.origin!==base.origin)return respond(res,403,{error:'bad_origin'});
+    // The ChatGPT iOS embedded browser may submit the same-site pairing form with
+    // Origin: https://chatgpt.com or Origin: null. Only the verify POST accepts
+    // those browser origins; the required short-lived CSRF cookie + form nonce
+    // are still checked below before a device can be approved.
+    const o=req.headers.origin;
+    const verifyPost=req.method==='POST'&&route==='/verify';
+    const compatibleVerifyOrigin=verifyPost&&(o==='https://chatgpt.com'||o==='https://chat.openai.com'||o==='null');
+    if(!['GET','HEAD'].includes(req.method)&&o&&o!==base.origin&&!compatibleVerifyOrigin)return respond(res,403,{error:'bad_origin'});
     if(req.method==='GET'&&route==='/health')return respond(res,200,{ok:true,service:'astae-device-pairing',version:'0.2.0',deviceFlow:true});
     if(req.method==='POST'&&route==='/device/authorization'){
       if(limited(req,'start',8))return respond(res,429,{error:'rate_limited'});
