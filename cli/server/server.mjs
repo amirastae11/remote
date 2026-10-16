@@ -18,7 +18,7 @@ function template(content){
 }
 export async function makePairingServer({baseURL='http://127.0.0.1:9011',stateFile=path.resolve('data/pairs.json'),now=()=>Date.now()}={}){
   const base=new URL(baseURL);
-  if(base.username||base.password||base.search||base.hash||base.pathname!=='/'||!['https:','http:'].includes(base.protocol))throw Error('Invalid relay base URL');
+  if(base.username||base.password||base.search||base.hash||!/^(\/|\/[a-zA-Z0-9_-]+\/)$/u.test(base.pathname)||!['https:','http:'].includes(base.protocol))throw Error('Invalid relay base URL');
   if(base.protocol!=='https:'&&!['localhost','127.0.0.1','[::1]'].includes(base.hostname))throw Error('HTTPS required');
   let db={requests:{},sessions:{},tokens:{},refresh:{},devices:{}};
   try{db=JSON.parse(await fs.readFile(stateFile,'utf8'));}catch(e){if(e.code!=='ENOENT')throw e;}
@@ -33,12 +33,15 @@ export async function makePairingServer({baseURL='http://127.0.0.1:9011',stateFi
   const cookies=req=>Object.fromEntries((req.headers.cookie||'').split(';').map(v=>v.trim()).filter(v=>v.includes('=')).map(v=>[v.slice(0,v.indexOf('=')),v.slice(v.indexOf('=')+1)]));
   const owner=req=>{const c=cookies(req).astae_session,r=c&&db.sessions[hash(c)];return r&&r.expires>now()?r.owner:null;};
   const deviceAuth=req=>{const b=req.headers.authorization||'',r=b.startsWith('Bearer ')&&db.tokens[hash(b.slice(7))];return r&&r.expires>now()?r:null;};
+  const publicPath=base.pathname;
   const secure=base.protocol==='https:'?'; Secure':'';
   function respond(res,status,obj,head={}){
     res.writeHead(status,{'content-type':'application/json; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff','x-frame-options':'DENY',...head});res.end(JSON.stringify(obj));
   }
   function webpage(res,status,content,head={}){
-    res.writeHead(status,{'content-type':'text/html; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff','x-frame-options':'DENY','referrer-policy':'no-referrer','content-security-policy':"default-src 'none'; style-src 'unsafe-inline'; form-action 'self'; base-uri 'none'",...head});res.end(template(content));
+    const rewriteCookie=s=>s.replaceAll('Path=/verify', 'Path='+publicPath+'verify').replaceAll('Path=/;', 'Path='+publicPath+';');
+    if(head['set-cookie']) head['set-cookie']=Array.isArray(head['set-cookie'])?head['set-cookie'].map(rewriteCookie):rewriteCookie(head['set-cookie']);
+    res.writeHead(status,{'content-type':'text/html; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff','x-frame-options':'DENY','referrer-policy':'no-referrer','content-security-policy':"default-src 'none'; style-src 'unsafe-inline'; form-action 'self'; base-uri 'none'",...head});res.end(template(content).replace(/(href|action)="\//g, '$1="'+publicPath));
   }
   async function parse(req){const parts=[];let bytes=0;for await(const p of req){bytes+=p.length;if(bytes>4096){const e=Error('request_too_large');e.status=413;throw e;}parts.push(p);}
     const s=Buffer.concat(parts).toString('utf8');return (req.headers['content-type']||'').includes('application/json')?JSON.parse(s):Object.fromEntries(new URLSearchParams(s));}
@@ -54,7 +57,7 @@ export async function makePairingServer({baseURL='http://127.0.0.1:9011',stateFi
       if(limited(req,'start',8))return respond(res,429,{error:'rate_limited'});
       const args=await parse(req),deviceCode=rand(),userCode=code();
       db.requests[hash(deviceCode)]={hash:hash(userCode),name:String(args.device_name||'My computer').slice(0,80),expires:now()+600000,status:'pending',nextPoll:0};
-      await save();return respond(res,200,{device_code:deviceCode,user_code:userCode,verification_uri:base.origin+'/verify',interval:3,expires_in:600});
+      await save();return respond(res,200,{device_code:deviceCode,user_code:userCode,verification_uri:base.origin+publicPath+'verify',interval:3,expires_in:600});
     }
     if(req.method==='POST'&&route==='/device/token'){
       if(limited(req,'token',400))return respond(res,429,{error:'rate_limited'});
@@ -125,5 +128,5 @@ export async function makePairingServer({baseURL='http://127.0.0.1:9011',stateFi
 if(process.argv[1]&&fileURLToPath(import.meta.url)===path.resolve(process.argv[1])){
   const port=Number(process.env.PORT||9011),baseURL=process.env.ASTAE_PAIR_BASE_URL||'http://127.0.0.1:'+port,stateFile=process.env.ASTAE_PAIR_DB||path.resolve('data/pairs.json');
   const app=await makePairingServer({baseURL,stateFile});
-  app.server.listen(port,'0.0.0.0',()=>console.log('Astae Pairing Relay ready on port '+port));
+  app.server.listen(port,'127.0.0.1',()=>console.log('Astae Pairing Relay ready on port '+port));
 }

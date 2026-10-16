@@ -27,7 +27,8 @@ export function relayURL(raw) {
   if (uri.username || uri.password || uri.search || uri.hash || (uri.protocol !== 'https:' && !(uri.protocol === 'http:' && ['localhost', '127.0.0.1', '[::1]'].includes(uri.hostname)))) {
     throw new Error('Relay URL must be HTTPS (HTTP allowed only for loopback development) without credentials or query');
   }
-  return uri.origin;
+  if (uri.pathname!=='/' && !/^\/[A-Za-z0-9_-]+\/$/.test(uri.pathname)) throw new Error('Invalid relay path; use / or /prefix/');
+  return uri.origin+(uri.pathname==='/'?'':uri.pathname);
 }
 
 export async function api(relay, method, endpoint, data, token, timeoutMs=8000) {
@@ -37,7 +38,7 @@ export async function api(relay, method, endpoint, data, token, timeoutMs=8000) 
     const headers = {'accept':'application/json'};
     if (data !== undefined) headers['content-type'] = 'application/json';
     if (token) headers['authorization'] = `Bearer ${token}`;
-    const response = await fetch(new URL(endpoint, relay), {
+    const response = await fetch(new URL(endpoint.replace(/^\//,''), relayURL(relay)+'/'), {
       method, headers, body: data === undefined ? undefined : JSON.stringify(data),
       signal: controller.signal, redirect: 'error',
     });
