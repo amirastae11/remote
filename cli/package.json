@@ -1,0 +1,11 @@
+{
+  "name": "astae-remote-cli",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Security-first, dependency-free one-command device connector prototype for Astae Remote",
+  "type": "module",
+  "bin": { "astae-remote": "./bin/astae-remote.mjs" },
+  "scripts": { "test": "node --test", "start": "node ./bin/astae-remote.mjs remote" },
+  "engines": { "node": ">=20" },
+  "license": "MIT"
+}
