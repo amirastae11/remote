@@ -44,7 +44,7 @@ async function main(){
   }
   if(cmd!=='remote')throw new Error('Unknown command '+cmd);
   if(existing?.connected && !session){
-    line('✓','Existing Astae Agent','Already running; avoiding duplicate agent and re-pairing','green');
+    line('✓','Connected','Existing Astae Agent: recent local heartbeat; not starting duplicate agent','green');
     line('!','ChatGPT OAuth','Still requires a one-time account connection','yellow');
     return;
   }
