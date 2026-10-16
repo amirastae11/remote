@@ -93,6 +93,8 @@ export async function deviceAuthorize(relay, {deviceName=os.hostname(), show, op
       if (e.code==='slow_down') {interval=Math.min(30,interval+5);continue;}
       if (e.code==='access_denied') throw new Error('Device authorization denied by account owner');
       if (e.code==='expired_token') throw new Error('Device code expired');
+      // Keep showing the same code across intermittent network failures. Never auto-authorize.
+      if ([408, 429, 500, 502, 503, 504].includes(e.status) || (!e.status && /aborted|aborterror|timeout|fetch failed|network/i.test(String(e.message||e.name)))) continue;
       throw e;
     }
   }
